@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: native
+          - target: x86_64
             cross: ""
           - target: armhf
             cross: "arm-linux-gnueabihf-"
@@ -33,7 +33,11 @@ jobs:
       - name: Install cross compilers
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu upx-ucl
+          sudo apt-get install -y \
+            gcc-arm-linux-gnueabihf \
+            gcc-aarch64-linux-gnu \
+            gcc-riscv64-linux-gnu \
+            upx-ucl
 
       - name: Build
         run: |
@@ -58,11 +62,10 @@ jobs:
           mkdir -p out/${{ matrix.target }}
 
           # install_openipc.sh (base64 safe)
-          echo "IyEvdXNyL2Jpbi9lbnYgc2gKSVA9JHsxOi0xOTIuMTY4LjEuMTB9CgplY2hvICJVcGxvYWRpbmcgSm95Q2FtIGJpbmFyaWVzIHRvIE9wZW5JUEMgZGV2aWNlIGF0ICRJUCINCnNjcCBjcnNmX3J4IGNyc2ZfdHggaWJ1c19yeCBpYnVzX3R4IHNidXNfcnggc2J1c190eCBqb3lzdGljayByb290QCRJUDovdXNyL2Jpbi8Kc2NwIGpveWNhbS5zZXJ2aWNlIHJvb3RAJElQOi9ldGMvc3lzdGVtZC9zeXN0ZW0vCgpzc2ggcm9vdEAkSVAgImNobW9kICt4IC91c3IvYmluL2Nyc2ZfcnggL3Vzci9iaW4vY3JzZl90eCAvdXNyL2Jpbi9pYnVzX3J4IC91c3IvYmluL2lidXNfdHggL3Vzci9iaW4vc2J1c19yeCAvdXNyL2Jpbi9zYnVzX3R4IC91c3IvYmluL2pveXN0aWNrIgpzc2ggcm9vdEAkSVAgInN5c3RlbWN0bCBlbmFibGUgam95Y2FtLnNlcnZpY2UiCnNzaCByb290QCRJUCAnc3lzdGVtY3RsIHJlc3RhcnQgam95Y2FtLnNlcnZpY2UnCgplY2hvICJJbnN0YWxsYXRpb24gY29tcGxldGUuIgo=" | base64 -d > out/${{ matrix.target }}/install_openipc.sh
-          chmod +x out/${{ matrix.target }}/install_openipc.sh
+          echo "IyEvdXNyL2Jpbi9lbnYgc2gKSVA9JHsxOi0xOTIuMTY4LjEuMTB9CgplY2hvICJVcGxvYWRpbmcgSm95Q2FtIGJpbmFyaWVzIHRvIE9wZW5JUEMgZGV2aWNlIGF0ICRJUCINCnNjcCBjcnNmX3J4IGNyc2ZfdHggaWJ1c19yeCBpYnVzX3R4IHNidXNfcnggc2J1c190eCBqb3lzdGljayByb290QCRJUDovdXNyL2Jpbi8Kc2NwIGpveWNhbS5zZXJ2aWNlIHJvb3RAJElQOi9ldGMvc3lzdGVtZC9zeXN0ZW0vCgpzc2ggcm9vdEAkSVAgImNobW9kICt4IC91c3IvYmluL2Nyc2ZfcnggL3Vzci9iaW4vY3JzZl90eCAvdXNyL2Jpbi9pYnVzX3J4IC91c3IvYmluL2lidXNfdHggL3Vzci9iaW4vc2J1c19yeCAvdXNyL2Jpbi9zYnVzX3R4IC91c3IvYmluL2pveXN0aWNrIgpzc2ggcm9vdEAkSVAgImVjaG8gSm95Q2FtIGluc3RhbGxlZCBzdWNjZXNzZnVsbHkuIgo=" \
+            | base64 -d > out/${{ matrix.target }}/install_openipc.sh
 
-          # joycam.service (base64 safe)
-          echo "W1VuaXRdCkRlc2NyaXB0aW9uPUpveUNhbSBJbnB1dCBCcmlkZ2UKQWZ0ZXI9bmV0d29yay50YXJnZXQKCltTZXJ2aWNlXQpFeGVjU3RhcnQ9L3Vzci9iaW4vY3JzZl9yeApSZXN0YXJ0PWFsd2F5cwoKW0luc3RhbGxdCldhbnRlZEJ5PW11bHRpLXVzZXIudGFyZ2V0Cg==" | base64 -d > out/${{ matrix.target }}/joycam.service
+          chmod +x out/${{ matrix.target }}/install_openipc.sh
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
