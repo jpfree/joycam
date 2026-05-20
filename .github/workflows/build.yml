@@ -1,0 +1,51 @@
+name: Build JoyCam
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    strategy:
+      matrix:
+        target: [native, armhf, arm64]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install cross compilers
+        if: matrix.target != 'native'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu
+
+      - name: Build (native x86_64)
+        if: matrix.target == 'native'
+        run: |
+          make
+          mkdir -p out/native
+          cp crsf_rx crsf_tx ibus_rx ibus_tx sbus_rx sbus_tx joystick out/native/
+
+      - name: Build (ARM 32-bit, arm-linux-gnueabihf)
+        if: matrix.target == 'armhf'
+        run: |
+          CROSS=arm-linux-gnueabihf- make
+          mkdir -p out/armhf
+          cp crsf_rx crsf_tx ibus_rx ibus_tx sbus_rx sbus_tx joystick out/armhf/
+
+      - name: Build (ARM64, aarch64-linux-gnu)
+        if: matrix.target == 'arm64'
+        run: |
+          CROSS=aarch64-linux-gnu- make
+          mkdir -p out/arm64
+          cp crsf_rx crsf_tx ibus_rx ibus_tx sbus_rx sbus_tx joystick out/arm64/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: joycam-${{ matrix.target }}
+          path: out/${{ matrix.target }}
