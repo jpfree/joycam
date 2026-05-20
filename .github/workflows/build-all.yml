@@ -1,7 +1,6 @@
 name: Build JoyCam (All Platforms)
 
 on:
-
   workflow_dispatch:
 
 env:
