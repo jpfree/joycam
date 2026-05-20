@@ -90,9 +90,7 @@ jobs:
           cd out/${{ matrix.target }}
           for f in *; do
             if [[ -f "$f" ]]; then
-              echo "Stripping $f"
               strip "$f" || true
-              echo "Compressing $f"
               upx --best --lzma "$f" || true
             fi
           done
@@ -102,33 +100,15 @@ jobs:
         run: |
           mkdir -p out/${{ matrix.target }}
 
-          cat > out/${{ matrix.target }}/install_openipc.sh << 'EOF'
-#!/bin/sh
-IP=${1:-192.168.1.10}
-echo "Uploading JoyCam binaries to OpenIPC device at $IP"
-
-scp crsf_rx crsf_tx ibus_rx ibus_tx sbus_rx sbus_tx joystick root@$IP:/usr/bin/
-
-scp joycam.service root@$IP:/etc/systemd/system/
-
-ssh root@$IP "chmod +x /usr/bin/crsf_rx /usr/bin/crsf_tx /usr/bin/ibus_rx /usr/bin/ibus_tx /usr/bin/sbus_rx /usr/bin/sbus_tx /usr/bin/joystick"
-ssh root@$IP "systemctl enable joycam.service"
-ssh root@$IP "systemctl restart joycam.service"
-
-echo "Installation complete."
+          # install_openipc.sh (base64 safe)
+          cat << 'EOF' | base64 -d > out/${{ matrix.target }}/install_openipc.sh
+IyEvdXNyL2Jpbi9lbnYgc2gKSVA9JHsxOi0xOTIuMTY4LjEuMTB9CgplY2hvICJVcGxvYWRpbmcgSm95Q2FtIGJpbmFyaWVzIHRvIE9wZW5JUEMgZGV2aWNlIGF0ICRJUCINCnNjcCBjcnNmX3J4IGNyc2ZfdHggaWJ1c19yeCBpYnVzX3R4IHNidXNfcnggc2J1c190eCBqb3lzdGljayByb290QCRJUDovdXNyL2Jpbi8Kc2NwIGpveWNhbS5zZXJ2aWNlIHJvb3RAJElQOi9ldGMvc3lzdGVtZC9zeXN0ZW0vCgpzc2ggcm9vdEAkSVAgImNobW9kICt4IC91c3IvYmluL2Nyc2ZfcnggL3Vzci9iaW4vY3JzZl90eCAvdXNyL2Jpbi9pYnVzX3J4IC91c3IvYmluL2lidXNfdHggL3Vzci9iaW4vc2J1c19yeCAvdXNyL2Jpbi9zYnVzX3R4IC91c3IvYmluL2pveXN0aWNrIgpzc2ggcm9vdEAkSVAgInN5c3RlbWN0bCBlbmFibGUgam95Y2FtLnNlcnZpY2UiCnNzaCByb290QCRJUCAnc3lzdGVtY3RsIHJlc3RhcnQgam95Y2FtLnNlcnZpY2UnCgplY2hvICJJbnN0YWxsYXRpb24gY29tcGxldGUuIgo=
 EOF
+          chmod +x out/${{ matrix.target }}/install_openipc.sh
 
-          cat > out/${{ matrix.target }}/joycam.service << 'EOF'
-[Unit]
-Description=JoyCam Input Bridge
-After=network.target
-
-[Service]
-ExecStart=/usr/bin/crsf_rx
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
+          # joycam.service (base64 safe)
+          cat << 'EOF' | base64 -d > out/${{ matrix.target }}/joycam.service
+W1VuaXRdCkRlc2NyaXB0aW9uPUpveUNhbSBJbnB1dCBCcmlkZ2UKQWZ0ZXI9bmV0d29yay50YXJnZXQKCltTZXJ2aWNlXQpFeGVjU3RhcnQ9L3Vzci9iaW4vY3JzZl9yeApSZXN0YXJ0PWFsd2F5cwoKW0luc3RhbGxdCldhbnRlZEJ5PW11bHRpLXVzZXIudGFyZ2V0Cg==
 EOF
 
       - name: Upload artifacts
