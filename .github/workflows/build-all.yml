@@ -1,6 +1,9 @@
 name: Build JoyCam (All Platforms)
 
 on:
+  push:
+    branches: [ "main" ]
+  pull_request:
   workflow_dispatch:
 
 env:
