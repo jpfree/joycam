@@ -1,0 +1,138 @@
+name: Build JoyCam (All Platforms)
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: native
+            cross: ""
+          - os: ubuntu-22.04
+            target: armhf
+            cross: "arm-linux-gnueabihf-"
+          - os: ubuntu-22.04
+            target: arm64
+            cross: "aarch64-linux-gnu-"
+          - os: ubuntu-22.04
+            target: riscv64
+            cross: "riscv64-linux-gnu-"
+          - os: macos-14
+            target: macos-arm64
+            cross: ""
+          - os: macos-13
+            target: macos-x86_64
+            cross: ""
+          - os: windows-latest
+            target: windows-x86_64
+            cross: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux cross compilers
+        if: runner.os == 'Linux' && matrix.cross != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu upx-ucl
+
+      - name: Install UPX (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install upx
+
+      - name: Install Windows MinGW + UPX
+        if: runner.os == 'Windows'
+        run: |
+          choco install mingw
+          choco install upx
+
+      - name: Build (Linux native or cross)
+        if: runner.os == 'Linux'
+        run: |
+          make clean || true
+          CROSS=${{ matrix.cross }} make
+          mkdir -p out/${{ matrix.target }}
+          cp crsf_rx crsf_tx ibus_rx ibus_tx sbus_rx sbus_tx joystick out/${{ matrix.target }}/
+
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          make clean || true
+          make
+          mkdir -p out/${{ matrix.target }}
+          cp crsf_rx crsf_tx ibus_rx ibus_tx sbus_rx sbus_tx joystick out/${{ matrix.target }}/
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          make clean || true
+          make CC=x86_64-w64-mingw32-gcc
+          mkdir -p out/${{ matrix.target }}
+          cp crsf_rx.exe crsf_tx.exe ibus_rx.exe ibus_tx.exe sbus_rx.exe sbus_tx.exe joystick.exe out/${{ matrix.target }}/
+
+      - name: Strip + UPX compress
+        run: |
+          cd out/${{ matrix.target }}
+          for f in *; do
+            if [[ -f "$f" ]]; then
+              echo "Stripping $f"
+              strip "$f" || true
+              echo "Compressing $f"
+              upx --best --lzma "$f" || true
+            fi
+          done
+
+      - name: Generate OpenIPC install script
+        if: matrix.target == 'armhf' || matrix.target == 'arm64'
+        run: |
+          mkdir -p out/${{ matrix.target }}
+
+          cat > out/${{ matrix.target }}/install_openipc.sh << 'EOF'
+#!/bin/sh
+IP=${1:-192.168.1.10}
+echo "Uploading JoyCam binaries to OpenIPC device at $IP"
+
+scp crsf_rx crsf_tx ibus_rx ibus_tx sbus_rx sbus_tx joystick root@$IP:/usr/bin/
+
+scp joycam.service root@$IP:/etc/systemd/system/
+
+ssh root@$IP "chmod +x /usr/bin/crsf_rx /usr/bin/crsf_tx /usr/bin/ibus_rx /usr/bin/ibus_tx /usr/bin/sbus_rx /usr/bin/sbus_tx /usr/bin/joystick"
+ssh root@$IP "systemctl enable joycam.service"
+ssh root@$IP "systemctl restart joycam.service"
+
+echo "Installation complete."
+EOF
+
+          cat > out/${{ matrix.target }}/joycam.service << 'EOF'
+[Unit]
+Description=JoyCam Input Bridge
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/crsf_rx
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: joycam-${{ matrix.target }}
+          path: out/${{ matrix.target }}
